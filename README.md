@@ -22,11 +22,24 @@ numpy 1.18.4
 
 The data folder should be organized as,
 ```
-./data/private/dataset/
+tt.arg.dataset_root = ./data/private/dataset/
 ```
 # Train
 ```
+python3 train.py
+```
+Change arguments for different experiments:
+-tt.arg.dataset: mini / tiered / CIFARFS
+-tt.arg.num_unlabeled : for semi-supervised learning
+-tt.arg.meta_batch_size: batch size
+-tt.arg.num_layers: 4 
+-tt.arg.num_ways: N-way   # 5-way
+-tt.arg.num_shots: K-shot   # 1-shot
+-tt.arg.transductive: False
 
+# eval
+```
+python3 eval.py
 ```
 
 # Citation
