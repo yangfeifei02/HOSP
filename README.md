@@ -27,7 +27,7 @@ tt.arg.dataset_root = ./data/private/dataset/
 # Train
 ```
 python3 train.py
-```
+
 Change arguments for different experiments:
 
 -tt.arg.dataset: mini / tiered / CIFARFS
@@ -43,7 +43,7 @@ Change arguments for different experiments:
 -tt.arg.num_shots: K-shot   # 1-shot
 
 -tt.arg.transductive: False
-
+```
 
 # eval
 ```
