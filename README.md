@@ -20,6 +20,15 @@ numpy 1.18.4
 
 -[CIFAR-FS](https://drive.google.com/file/d/1pTsCCMDj45kzFYgrnO67BWVbKs48Q3NI/view)
 
+The data folder should be organized as,
+```
+./data/private/
+```
+# Train
+```
+
+```
+
 # Citation
 
 If you find this code useful you can cite us using the following bibTex:
