@@ -14,9 +14,9 @@ numpy 1.18.4
 
 -[miniImagenet](https://drive.google.com/drive/folders/15WuREBvhEbSWo4fTr1r-vMY0C_6QWv4w) dataset
 'mini_imagenet_train/val/test.pickle'
--[FC-100]
--[tiered-imagenet]
--[CIFAR-FS]
+-[FC-100](https://drive.google.com/drive/folders/1nz_ADBblmrg-qs-8zFU3v6C5WSwQnQm6)
+-[tiered-imagenet](https://drive.google.com/file/d/1g1aIDy2Ar_MViF2gDXFYDBTR-HYecV07/view)
+-[CIFAR-FS]()
 
 # Citation
 If you find this code useful you can cite us using the following bibTex:
