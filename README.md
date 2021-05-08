@@ -22,7 +22,7 @@ numpy 1.18.4
 
 The data folder should be organized as,
 ```
-./data/private/
+./data/private/dataset/
 ```
 # Train
 ```
