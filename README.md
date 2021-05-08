@@ -32,7 +32,7 @@ Modify the following parameters for different models
 
 -tt.arg.dataset: mini / tiered / CIFARFS
 
--tt.arg.num_unlabeled : for semi-supervised learning
+-tt.arg.num_unlabeled : 0
 
 -tt.arg.meta_batch_size: batch size
 
