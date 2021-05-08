@@ -172,13 +172,11 @@ class ModelTrainer(object):
             total_loss_layers = list(map(lambda x, y: x + y, query_edge_loss_layers, mainfold))
 
 
-            # update model  更新模型
+            # update model
             total_loss = []
             for l in range(tt.arg.num_layers - 1):
-                # total_loss += [total_loss_layers[l].view(-1) * 0.25]
                 total_loss += [total_loss_layers[l].view(-1) * 0.5]
             total_loss += [total_loss_layers[-1].view(-1) * 1.0]
-            # total_loss += [total_loss_layers[-1].view(-1) * 0.5]
             total_loss = torch.mean(torch.cat(total_loss, 0))
 
             total_loss.backward()
@@ -393,18 +391,17 @@ class ModelTrainer(object):
 
     def label2edge(self, label):
         # get size
-        num_samples = label.size(1) # num_samples = 10 ，label的第二维
+        num_samples = label.size(1) # num_samples = 10 
 
         # reshape
-        label_i = label.unsqueeze(-1).repeat(1, 1, num_samples)    # unsqueeze(-1)在倒数第一维添加一个维度，repeat()函数，将第一维重复一次，将第二维重复一次，将第三维重复num_samples次
-        label_j = label_i.transpose(1, 2)   # 交换1，2维度
+        label_i = label.unsqueeze(-1).repeat(1, 1, num_samples)    
+        label_j = label_i.transpose(1, 2)  
 
         # compute edge
-        edge = torch.eq(label_i, label_j).float().to(tt.arg.device)   # size = 80*10*10 ,对角线为1，其余位置为0
+        edge = torch.eq(label_i, label_j).float().to(tt.arg.device)   
 
-        # expand,扩展
         edge = edge.unsqueeze(1)     # size = 80*1*10*10
-        edge = torch.cat([edge, 1 - edge, 1 - edge], 1)    # size = 80*2*10*10
+        edge = torch.cat([edge, 1 - edge, 1 - edge], 1)    # size = 80*3*10*10
         return edge
 
     def hit(self, logit, label):
@@ -494,10 +491,10 @@ if __name__ == '__main__':
     tt.arg.log_dir = tt.arg.log_dir_user
 
 
-    if not os.path.exists('result 5-way 5-shot/checkpoints'):
-        os.makedirs('result 5-way 5-shot/checkpoints')
-    if not os.path.exists('result 5-way 5-shot/checkpoints/' + tt.arg.experiment):
-        os.makedirs('result 5-way 5-shot/checkpoints/' + tt.arg.experiment)
+    if not os.path.exists('result/checkpoints'):
+        os.makedirs('result/checkpoints')
+    if not os.path.exists('result/checkpoints/' + tt.arg.experiment):
+        os.makedirs('result/checkpoints/' + tt.arg.experiment)
 
 
     # embedding
