@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
-class ConvBlock(nn.Module):           #定义卷积块
+class ConvBlock(nn.Module):       
     def __init__(self, in_planes, out_planes, userelu=True, momentum=0.1, affine=True, track_running_stats=True):
         super(ConvBlock, self).__init__()
         self.layers = nn.Sequential()
@@ -124,8 +124,6 @@ class EmbeddingImagenet(nn.Module):
 
     def forward(self, input_data):
         output_data = self.conv_4(self.conv_3(self.conv_2(self.conv_1(input_data))))
-        #out = self.layer_last(output_data.view(output_data.size(0), -1))
-        #return out
         return self.layer_last(output_data.view(output_data.size(0), -1))
 
 
@@ -137,9 +135,7 @@ class NodeUpdateNetwork(nn.Module):
                  dropout=0.0):
         super(NodeUpdateNetwork, self).__init__()
         # set size
-        self.in_features = in_features    #128
-        #self.num_features_list = [num_features * r for r in ratio]    #[192,96]
-        #self.num_features_list = [in_features * r for r in ratio]  # [192,96]
+        self.in_features = in_features    # 128
         self.num_features_list = [256,128]
         self.dropout = dropout
 
@@ -149,7 +145,6 @@ class NodeUpdateNetwork(nn.Module):
 
             layer_list['conv{}'.format(l)] = nn.Conv2d(
                 in_channels=self.num_features_list[l - 1] if l > 0 else 512,
-                #in_channels=self.num_features_list[l - 1] if l > 0 else self.in_features * 3,self.in_features * 4
                 out_channels=self.num_features_list[l],
                 kernel_size=1,
                 bias=False)
@@ -169,19 +164,18 @@ class NodeUpdateNetwork(nn.Module):
 
         # get eye matrix (batch_size x 2 x node_size x node_size)
         #diag_mask = 1.0 - torch.eye(num_data).unsqueeze(0).unsqueeze(0).repeat(num_tasks, 2, 1, 1).to(tt.arg.device)
-        diag_mask = 1.0 - torch.eye(num_data).unsqueeze(0).unsqueeze(0).repeat(num_tasks, 3, 1, 1).to(tt.arg.device)    # torch.eye返回对角线位置全为1, 其它位置全为0的二维tensor
-
+        diag_mask = 1.0 - torch.eye(num_data).unsqueeze(0).unsqueeze(0).repeat(num_tasks, 3, 1, 1).to(tt.arg.device)  
         # set diagonal as zero and normalize
-        edge_feat = F.normalize(edge_feat * diag_mask, p=1, dim=-1)   # 归一化输入数组，使它的数值范围在一定的范围内
+        edge_feat = F.normalize(edge_feat * diag_mask, p=1, dim=-1) 
 
-        # compute attention and aggregate，计算注意和聚合
+        # compute attention and aggregate
         # tmp= torch.cat(torch.split(edge_feat, 1, 1), 2).squeeze(1)  #size = 80*30*10
-        aggr_feat = torch.bmm(torch.cat(torch.split(edge_feat, 1, 1), 2).squeeze(1), node_feat)      #split()通过指定分隔符对字符串进行切片torch.cat(torch.split(edge_feat, 1, 1), 2).squeeze(1)
+        aggr_feat = torch.bmm(torch.cat(torch.split(edge_feat, 1, 1), 2).squeeze(1), node_feat)     
         #node_feat size = 80*512*10
-        node_feat = torch.cat([node_feat, torch.cat(aggr_feat.split(num_data, 1), -1)], -1).transpose(1, 2)   #将第一维30按照num_data=10进行切片，形成len=3的80*10*128，经过cat之后的size=80*10*512,经过cat后size没变化
-
+        node_feat = torch.cat([node_feat, torch.cat(aggr_feat.split(num_data, 1), -1)], -1).transpose(1, 2)   
+        
         # non-linear transform
-        node_feat = self.network(node_feat.unsqueeze(-1)).transpose(1, 2).squeeze(-1)  #node_feat.unsqueeze(-1)在倒数第一个维度增加一个维度,squeeze(-1)将倒数第一维删除
+        node_feat = self.network(node_feat.unsqueeze(-1)).transpose(1, 2).squeeze(-1)  
         return node_feat
 
 
@@ -265,6 +259,8 @@ class EdgeUpdateNetwork(nn.Module):
             dsim_val = F.sigmoid(self.dsim_network(x_ij))
         else:
             dsim_val = 1.0 - sim_val
+          
+       # compute high-order structure
 
         node = node_feat
         node = torch.abs(node)
@@ -285,31 +281,11 @@ class EdgeUpdateNetwork(nn.Module):
 
         node = torch.abs(node)
 
-        # node = node_feat
-        # node = torch.abs(node).cuda(device="cuda:2")
-        #
-        # node = node_feat
-        # node = torch.abs(node).cuda(device="cuda:2")
-        # # nod = node.view(node.size(0) * node.size(1), node.size(2))
-        # a = int(int((node.size(0)) / 2))
-        # b = int((node.size(1)) / 2)
-        # nod = torch.cat([node[a:, :, :], node[:a, :, :]], 0)
-        # nod = torch.cat([nod[:, b:, :], nod[:, :b, :]], 1)
-        # node = node - nod
-        # # node = node.cuda(device ="cuda:2")
-        # x1 = node.unsqueeze(2)
-        # x2 = torch.transpose(x_i, 1, 2)
-        # node = torch.abs(x1 - x2)
-        #
-        # node = torch.abs(node)
-        # node = torch.transpose(node, 1, 3)
-
         feat_sim = F.softmax(self.feat_sim(node))
 
         feat_sim = torch.transpose(feat_sim, 1, 3)
 
-        mainfold = sim_val * edge_feat[:, 0, :, :] + (1.0 - sim_val) * edge_feat[:, 1, :, :] + feat_sim * edge_feat[:,
-                                                                                                          2, :, :]
+        mainfold = sim_val * edge_feat[:, 0, :, :] + (1.0 - sim_val) * edge_feat[:, 1, :, :] + feat_sim * edge_feat[:, 2, :, :]
         mainfold = torch.norm(mainfold, p='fro', dim=None, keepdim=False, out=None, dtype=None)
 
         diag_mask = 1.0 - torch.eye(node_feat.size(1)).unsqueeze(0).unsqueeze(0).repeat(node_feat.size(0), 3, 1, 1).to(
@@ -319,18 +295,14 @@ class EdgeUpdateNetwork(nn.Module):
         merge_sum = torch.sum(edge_feat, -1, True)
         # set diagonal as zero and normalize
         edge_feat = F.normalize(torch.cat([sim_val, dsim_val, feat_sim], 1) * edge_feat, p=1, dim=-1) * merge_sum
-        # torch.eye返回一个2维张量，对角线位置全1，其他位置全0
-        # tmp = torch.eye(node_feat.size(1)).unsqueeze(0)    #torch.eye(node_feat.size(1)).unsqueeze(0)  size = 1*10*10
-        # tmp1 = torch.zeros(node_feat.size(1),node_feat.size(1)).unsqueeze(0)  #torch.zeros(node_feat.size(1),node_feat.size(1)).unsqueeze(0)   size = 1*10*10
+      
         force_edge_feat = torch.cat((torch.eye(node_feat.size(1)).unsqueeze(0),
                                      torch.zeros(node_feat.size(1), node_feat.size(1)).unsqueeze(0),
                                      torch.zeros(node_feat.size(1), node_feat.size(1)).unsqueeze(0)), 0).unsqueeze(
             0).repeat(node_feat.size(0), 1, 1, 1).to(tt.arg.device)
-        # force_edge_feat = torch.cat((torch.eye(node_feat.size(1)).unsqueeze(0), torch.zeros(node_feat.size(1), node_feat.size(1)).unsqueeze(0)), 0).unsqueeze(0).repeat(node_feat.size(0), 1, 1, 1).to(tt.arg.device)
-        edge_feat = edge_feat + force_edge_feat
+             edge_feat = edge_feat + force_edge_feat
         edge_feat = edge_feat + 1e-6  # size = 80*3*10*10
         edge_feat = edge_feat / torch.sum(edge_feat, dim=1).unsqueeze(1).repeat(1, 3, 1, 1)
-        # edge_feat = edge_feat / torch.sum(edge_feat, dim=1).unsqueeze(1).repeat(1, 2, 1, 1)
 
         return edge_feat, mainfold
 
@@ -352,7 +324,7 @@ class GraphNetwork(nn.Module):
 
         # for each layer
         for l in range(self.num_layers):
-            # set edge to node  边缘到节点
+            # set edge to node
             edge2node_net = NodeUpdateNetwork(in_features=self.in_features if l == 0 else self.node_features,
                                               num_features=self.node_features,
                                               dropout=self.dropout if l < self.num_layers-1 else 0.0)
@@ -377,11 +349,10 @@ class GraphNetwork(nn.Module):
 
             # (2) node to edge
             edge_feat,mainfold = self._modules['node2edge_net{}'.format(l)](node_feat, edge_feat)
-            # mainfold = self._modules['node2edge_net{}'.format(l)](node_feat, edge_feat)
-
+         
             # save edge feature
             edge_feat_list.append(edge_feat)
-            mainfold_list.append(mainfold)  #edge_feat  边特征
+            mainfold_list.append(mainfold)  
 
         if tt.arg.visualization:
             for l in range(self.num_layers):
