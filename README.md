@@ -44,7 +44,7 @@ Modify the following parameters for different models
 
 -tt.arg.transductive: False
 
--Setting of parameter λ :[0,10^-7]
+-Setting of parameter λ : [0 , 10^-7]
 ```
 
 # eval
