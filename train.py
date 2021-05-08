@@ -132,7 +132,7 @@ class ModelTrainer(object):
                 input_node_feat = torch.cat([support_data_tiled, query_data_reshaped], 1) # (batch_size x num_queries) x (num_support + 1) x featdim
 
                 input_edge_feat = 0.5 * torch.ones(tt.arg.meta_batch_size, 3, num_supports + 1, num_supports + 1).to(tt.arg.device) # batch_size x 3 x (num_support + 1) x (num_support + 1)
-3
+
                 input_edge_feat[:, :, :num_supports, :num_supports] = init_edge[:, :, :num_supports, :num_supports] # batch_size x 3 x (num_support + 1) x (num_support + 1)
                 input_edge_feat = input_edge_feat.repeat(num_queries, 1, 1, 1) #(batch_size x num_queries) x 2 x (num_support + 1) x (num_support + 1)
 
