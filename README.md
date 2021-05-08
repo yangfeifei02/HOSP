@@ -54,6 +54,11 @@ Modify tt.arg.test_model for different models
 tt.arg.test_model = 'D-mini_N-5_K-5_U-0_L-4_B-40_T-False'
 ```
 
+# Results
+
+````
+result/checkpoints
+```
 # Citation
 
 If you find this code useful you can cite us using the following bibTex:
