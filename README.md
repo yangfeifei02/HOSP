@@ -43,6 +43,8 @@ Modify the following parameters for different models
 -tt.arg.num_shots: K-shot   # 1-shot
 
 -tt.arg.transductive: False
+
+-Setting of parameter λ :[0,10^-7]
 ```
 
 # eval
