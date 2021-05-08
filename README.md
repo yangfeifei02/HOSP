@@ -10,7 +10,8 @@ torch 1.2.0
 
 numpy 1.18.4
 
-# setting
+# dataset
+
 You can download [miniImagenet](https://drive.google.com/drive/folders/15WuREBvhEbSWo4fTr1r-vMY0C_6QWv4w) dataset
 
 Download 'mini_imagenet_train/val/test.pickle', and put them in the path 'tt.arg.dataset_root/mini-imagenet/compacted_dataset/'
