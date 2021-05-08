@@ -11,8 +11,8 @@ torch 1.2.0
 numpy 1.18.4
 
 # dataset
-
--[miniImagenet](https://drive.google.com/drive/folders/15WuREBvhEbSWo4fTr1r-vMY0C_6QWv4w) dataset
+```
+-[miniImagenet](https://drive.google.com/drive/folders/15WuREBvhEbSWo4fTr1r-vMY0C_6QWv4w)
 
 'mini_imagenet_train/val/test.pickle'
 
@@ -21,7 +21,7 @@ numpy 1.18.4
 -[tiered-imagenet](https://drive.google.com/file/d/1g1aIDy2Ar_MViF2gDXFYDBTR-HYecV07/view)
 
 -[CIFAR-FS](https://drive.google.com/file/d/1pTsCCMDj45kzFYgrnO67BWVbKs48Q3NI/view)
-
+```
 # Citation
 
 If you find this code useful you can cite us using the following bibTex:
