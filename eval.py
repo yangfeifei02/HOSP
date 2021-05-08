@@ -11,11 +11,9 @@ import torchvision.models as models
 if __name__ == '__main__':
 
 
-    #D-mini_N-5_K-1_U-0_L-3_B-40_T-True  resnet18
-    tt.arg.test_model = 'D-CIFARFS_N-5_K-5_U-0_L-4_B-40_T-False' if tt.arg.test_model is None else tt.arg.test_model
-    # tt.arg.test_model = 'D-tiered_N-5_K-5_U-0_L-3_B-20_T-False' if tt.arg.test_model is None else tt.arg.test_model
-    #tt.arg.test_model = 'D-mini_N-5_K-1_U-0_L-3_B-40_T-False' if tt.arg.test_model is None else tt.arg.test_model
-
+    # D-mini_N-5_K-1_U-0_L-4_B-40_T-True  
+    tt.arg.test_model = 'D-mini_N-5_K-5_U-0_L-4_B-40_T-False' if tt.arg.test_model is None else tt.arg.test_model
+ 
     list1 = tt.arg.test_model.split("_")
     param = {}
     for i in range(len(list1)):
@@ -30,17 +28,15 @@ if __name__ == '__main__':
 
 
     ####################
-    # tt.arg.device = 'cuda:0' if tt.arg.device is None else tt.arg.device
-    tt.arg.device = device = torch.device("cuda:2")
+
+    tt.arg.device = device = torch.device("cuda:3")
     # replace dataset_root with your own
     tt.arg.dataset_root = './data/private/dataset'
-    # tt.arg.dataset = 'tiered' if tt.arg.dataset is None else tt.arg.dataset
     tt.arg.dataset = 'mini' if tt.arg.dataset is None else tt.arg.dataset
     tt.arg.num_ways = 5 if tt.arg.num_ways is None else tt.arg.num_ways
     tt.arg.num_shots = 1 if tt.arg.num_shots is None else tt.arg.num_shots
     tt.arg.num_unlabeled = 0 if tt.arg.num_unlabeled is None else tt.arg.num_unlabeled
     tt.arg.num_layers = 1 if tt.arg.num_layers is None else tt.arg.num_layers
-    # tt.arg.meta_batch_size = 40 if tt.arg.meta_batch_size is None else tt.arg.meta_batch_size
     tt.arg.meta_batch_size = 40 if tt.arg.meta_batch_size is None else tt.arg.meta_batch_size
     tt.arg.transductive = False if tt.arg.transductive is None else tt.arg.transductive
     tt.arg.seed = 222 if tt.arg.seed is None else tt.arg.seed
@@ -85,16 +81,7 @@ if __name__ == '__main__':
 
     enc_module = EmbeddingImagenet(emb_size=tt.arg.emb_size)
 
-    # enc_module = models.resnet18(pretrained=True)
-    # enc_module.fc = nn.Linear(512, 128)
-    # enc_module = models.resnet18(pretrained=True)
-    # for param in enc_module.parameters():  # 这个循环将冻结所有的层
-    #     param.requires_grad = False
-    # enc_module.fc = nn.Linear(512, 128)
-
-    #enc_module = models.resnet101(pretrained=True)
-    #enc_module.fc = nn.Linear(2048, 128)
-
+  
     # set random seed
     np.random.seed(tt.arg.seed)
     torch.manual_seed(tt.arg.seed)
@@ -103,7 +90,6 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    # to check
     exp_name = 'D-{}'.format(tt.arg.dataset)
     exp_name += '_N-{}_K-{}_U-{}'.format(tt.arg.num_ways, tt.arg.num_shots, tt.arg.num_unlabeled)
     exp_name += '_L-{}_B-{}'.format(tt.arg.num_layers, tt.arg.meta_batch_size)
@@ -127,8 +113,6 @@ if __name__ == '__main__':
     elif tt.arg.dataset == 'tiered':
         test_loader = TieredImagenetLoader(root=tt.arg.dataset_root, partition='test')
     elif tt.arg.dataset == 'CIFARFS':
-        # train_loader = CIFARFSLoader(root=tt.arg.dataset_root, partition='train')
-        # valid_loader = CIFARFSLoader(root=tt.arg.dataset_root, partition='val')
         dataset_train = Cifar(root=tt.arg.dataset_root, partition='train')
         dataset_valid = Cifar(root=tt.arg.dataset_root, partition='val')
         dataset_test = Cifar(root=tt.arg.dataset_root, partition='test')
@@ -149,9 +133,7 @@ if __name__ == '__main__':
 
 
     checkpoint = torch.load('./result 5-way 5-shot/checkpoints/{}/'.format(exp_name) + 'model_best.pth.tar')
-    # checkpoint = torch.load('./assets/checkpoints/{}/'.format(exp_name) + 'model_best.pth.tar')
-    #checkpoint = torch.load('./trained_models/{}/'.format(exp_name) + 'model_best.pth.tar')
-
+    
 
     tester.enc_module.load_state_dict(checkpoint['enc_module_state_dict'])
     print("load pre-trained enc_nn done!")
