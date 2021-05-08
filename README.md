@@ -28,7 +28,7 @@ tt.arg.dataset_root = ./data/private/dataset/
 ```
 python3 train.py
 
-Change arguments for different experiments:
+Modify the following parameters for different models
 
 -tt.arg.dataset: mini / tiered / CIFARFS
 
@@ -48,6 +48,9 @@ Change arguments for different experiments:
 # eval
 ```
 python3 eval.py
+
+Modify tt.arg.test_model for different models
+tt.arg.test_model = 'D-mini_N-5_K-5_U-0_L-4_B-40_T-False'
 ```
 
 # Citation
