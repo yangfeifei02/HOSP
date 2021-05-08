@@ -26,17 +26,12 @@ numpy 1.18.4
 
 If you find this code useful you can cite us using the following bibTex:
 
-```ruby
+```
 @article{lin2020high,
-
-  title={High-order structure preserving graph neural network for few-shot learning},
-  
-  author={Guangfeng Lin, Ying Yang, Yindi Fan, Xiaobing Kang, Kaiyang Liao, Fan Zhao},
-  
-  journal={arXiv preprint arXiv:2005.14415},
-  
-  year={2020}
-  
+title={High-order structure preserving graph neural network for few-shot learning},
+author={Guangfeng Lin, Ying Yang, Yindi Fan, Xiaobing Kang, Kaiyang Liao, Fan Zhao},
+journal={arXiv preprint arXiv:2005.14415},
+year={2020}
 }
 ```
 
