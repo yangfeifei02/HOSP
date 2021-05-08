@@ -20,7 +20,7 @@ Download 'mini_imagenet_train/val/test.pickle', and put them in the path 'tt.arg
 
 # Citation
 If you find this code useful you can cite us using the following bibTex:
-
+'''
 @article{lin2020high,
   title={High-order structure preserving graph neural network for few-shot learning},
   
@@ -30,3 +30,4 @@ If you find this code useful you can cite us using the following bibTex:
   
   year={2020}
 }
+'''
