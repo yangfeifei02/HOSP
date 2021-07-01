@@ -1,5 +1,5 @@
 from torchtools import *
-from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader
+from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader,Amazon_clothingLoader
 from model import GraphNetwork
 from model import EmbeddingImagenet, GraphNetwork, ConvNet
 import shutil
@@ -11,9 +11,10 @@ import torchvision.models as models
 if __name__ == '__main__':
 
 
-    # D-mini_N-5_K-1_U-0_L-4_B-40_T-True  
-    tt.arg.test_model = 'D-mini_N-5_K-5_U-0_L-4_B-40_T-False' if tt.arg.test_model is None else tt.arg.test_model
- 
+    #D-mini_N-5_K-1_U-0_L-3_B-40_T-True
+    tt.arg.test_model = 'D-tiered_N-5_K-1_U-0_L-4_B-40_T-False' if tt.arg.test_model is None else tt.arg.test_model
+
+
     list1 = tt.arg.test_model.split("_")
     param = {}
     for i in range(len(list1)):
@@ -28,8 +29,7 @@ if __name__ == '__main__':
 
 
     ####################
-
-    tt.arg.device = device = torch.device("cuda:3")
+    tt.arg.device = device = torch.device("cuda:2")
     # replace dataset_root with your own
     tt.arg.dataset_root = './data/private/dataset'
     tt.arg.dataset = 'mini' if tt.arg.dataset is None else tt.arg.dataset
@@ -41,6 +41,7 @@ if __name__ == '__main__':
     tt.arg.transductive = False if tt.arg.transductive is None else tt.arg.transductive
     tt.arg.seed = 222 if tt.arg.seed is None else tt.arg.seed
     tt.arg.num_gpus = 1 if tt.arg.num_gpus is None else tt.arg.num_gpus
+    tt.arg.loss_parameter = torch.tensor(0.0)
 
     tt.arg.num_ways_train = tt.arg.num_ways
     tt.arg.num_ways_test = tt.arg.num_ways
@@ -81,7 +82,6 @@ if __name__ == '__main__':
 
     enc_module = EmbeddingImagenet(emb_size=tt.arg.emb_size)
 
-  
     # set random seed
     np.random.seed(tt.arg.seed)
     torch.manual_seed(tt.arg.seed)
@@ -90,6 +90,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    # to check
     exp_name = 'D-{}'.format(tt.arg.dataset)
     exp_name += '_N-{}_K-{}_U-{}'.format(tt.arg.num_ways, tt.arg.num_shots, tt.arg.num_unlabeled)
     exp_name += '_L-{}_B-{}'.format(tt.arg.num_layers, tt.arg.meta_batch_size)
@@ -116,7 +117,6 @@ if __name__ == '__main__':
         dataset_train = Cifar(root=tt.arg.dataset_root, partition='train')
         dataset_valid = Cifar(root=tt.arg.dataset_root, partition='val')
         dataset_test = Cifar(root=tt.arg.dataset_root, partition='test')
-
         train_loader = CIFARFSLoader(dataset_train)
         valid_loader = CIFARFSLoader(dataset_valid)
         test_loader = CIFARFSLoader(dataset_test)
@@ -132,8 +132,7 @@ if __name__ == '__main__':
                            data_loader=data_loader)
 
 
-    checkpoint = torch.load('./result 5-way 5-shot/checkpoints/{}/'.format(exp_name) + 'model_best.pth.tar')
-    
+    checkpoint = torch.load('./result/checkpoints/{}/'.format(exp_name) + 'model_best.pth.tar')
 
     tester.enc_module.load_state_dict(checkpoint['enc_module_state_dict'])
     print("load pre-trained enc_nn done!")
