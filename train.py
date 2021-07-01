@@ -1,15 +1,13 @@
 from torchtools import *
 
-from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader
+from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader,FC_100Loader
 from model import EmbeddingImagenet, GraphNetwork, ConvNet
 from model import GraphNetwork
-#from model import LSTM, GraphNetwork
 import shutil
 import os
 import random
 import seaborn as sns
 import torchvision.models as models
-# from eval import *
 
 class ModelTrainer(object):
     def __init__(self,
@@ -21,7 +19,6 @@ class ModelTrainer(object):
         # set encoder and gnn
         self.enc_module = enc_module.to(tt.arg.device)
         self.gnn_module = gnn_module.to(tt.arg.device)
-        # device = torch.device("cuda:1")
 
 
 
@@ -60,11 +57,11 @@ class ModelTrainer(object):
         num_queries = tt.arg.num_ways_train * 1  # num_queries = 5
         num_samples = num_supports + num_queries  # num_samples = 10
         support_edge_mask = torch.zeros(tt.arg.meta_batch_size, num_samples, num_samples).to(tt.arg.device)     # size=  batch * 10 *10
-        support_edge_mask[:, :num_supports, :num_supports] = 1    # 
-        query_edge_mask = 1 - support_edge_mask      
+        support_edge_mask[:, :num_supports, :num_supports] = 1
+        query_edge_mask = 1 - support_edge_mask      #query_edge_mask
 
         evaluation_mask = torch.ones(tt.arg.meta_batch_size, num_samples, num_samples).to(tt.arg.device)  # size=  batch * 10 *10
-        # for semi-supervised setting, ignore unlabeled support sets for evaluation  
+        # for semi-supervised setting, ignore unlabeled support sets for evaluation
         for c in range(tt.arg.num_ways_train):
             evaluation_mask[:,
             ((c + 1) * tt.arg.num_shots_train - tt.arg.num_unlabeled):(c + 1) * tt.arg.num_shots_train,
@@ -80,7 +77,7 @@ class ModelTrainer(object):
             # set current step
             self.global_step = iter
 
-            # load task data list  
+            # load task data list
             [support_data,
              support_label,
              query_data,
@@ -92,7 +89,7 @@ class ModelTrainer(object):
             # set as single data
             full_data = torch.cat([support_data, query_data], 1).to(tt.arg.device)       # batch * 10 * 3 * 84 * 84
             full_label = torch.cat([support_label, query_label], 1)   # batch *10
-            full_edge = self.label2edge(full_label)           # batch * 3 * 10 * 10  
+            full_edge = self.label2edge(full_label)           # batch * 3 * 10 * 10
 
             # set init edge
             init_edge = full_edge.clone()  # batch_size x 3 x num_samples x num_samples
@@ -107,7 +104,7 @@ class ModelTrainer(object):
             #     init_edge[:, :, ((c+1) * tt.arg.num_shots_train - tt.arg.num_unlabeled):(c+1) * tt.arg.num_shots_train, :num_supports] = 0.5
             #     init_edge[:, :, :num_supports, ((c+1) * tt.arg.num_shots_train - tt.arg.num_unlabeled):(c+1) * tt.arg.num_shots_train] = 0.5
 
-            # set as train mode  训练
+            # set as train mode
             self.enc_module.train()
             self.gnn_module.train()
 
@@ -123,7 +120,7 @@ class ModelTrainer(object):
             else:
                 evaluation_mask[:, num_supports:, num_supports:] = 0 # ignore query-query edges, since it is non-transductive setting
                 # input_node_feat: (batch_size x num_queries) x (num_support + 1) x featdim
-                # input_edge_feat: (batch_size x num_queries) x 2 x (num_support + 1) x (num_support + 1)
+                # input_edge_feat: (batch_size x num_queries) x 3 x (num_support + 1) x (num_support + 1)
                 support_data = full_data[:, :num_supports] # batch_size x num_support x featdim
                 query_data = full_data[:, num_supports:] # batch_size x num_query x featdim
                 support_data_tiled = support_data.unsqueeze(1).repeat(1, num_queries, 1, 1) # batch_size x num_queries x num_support x featdim
@@ -131,10 +128,10 @@ class ModelTrainer(object):
                 query_data_reshaped = query_data.contiguous().view(tt.arg.meta_batch_size * num_queries, -1).unsqueeze(1) # (batch_size x num_queries) x 1 x featdim
                 input_node_feat = torch.cat([support_data_tiled, query_data_reshaped], 1) # (batch_size x num_queries) x (num_support + 1) x featdim
 
-                input_edge_feat = 0.5 * torch.ones(tt.arg.meta_batch_size, 3, num_supports + 1, num_supports + 1).to(tt.arg.device) # batch_size x 3 x (num_support + 1) x (num_support + 1)
+                input_edge_feat = 0.5 * torch.ones(tt.arg.meta_batch_size, 3, num_supports + 1, num_supports + 1).to(tt.arg.device) # batch_size x 2 x (num_support + 1) x (num_support + 1)
 
                 input_edge_feat[:, :, :num_supports, :num_supports] = init_edge[:, :, :num_supports, :num_supports] # batch_size x 3 x (num_support + 1) x (num_support + 1)
-                input_edge_feat = input_edge_feat.repeat(num_queries, 1, 1, 1) #(batch_size x num_queries) x 2 x (num_support + 1) x (num_support + 1)
+                input_edge_feat = input_edge_feat.repeat(num_queries, 1, 1, 1) #(batch_size x num_queries) x 3 x (num_support + 1) x (num_support + 1)
 
                 # logit: (batch_size x num_queries) x 3 x (num_support + 1) x (num_support + 1)
                 logit_layers,mainfold = self.gnn_module(node_feat=input_node_feat, edge_feat=input_edge_feat,mainfold = input_edge_feat)
@@ -167,10 +164,9 @@ class ModelTrainer(object):
             query_node_pred_layers = [torch.bmm(full_logit_layer[:, 0, num_supports:, :num_supports], self.one_hot_encode(tt.arg.num_ways_train, support_label.long())) for full_logit_layer in full_logit_layers] # (num_tasks x num_quries x num_supports) * (num_tasks x num_supports x num_ways)
             # query_label
             query_node_accr_layers = [torch.eq(torch.max(query_node_pred_layer, -1)[1], query_label.long().to(tt.arg.device)).float().mean() for query_node_pred_layer in query_node_pred_layers]
-            # Setting of parameter λ
-            mainfold = [ x * 0 for x in mainfold]   #  λ = 0   
-            total_loss_layers = list(map(lambda x, y: x + y, query_edge_loss_layers, mainfold))
 
+            mainfold = [ x * tt.arg.loss_parameter for x in mainfold]
+            total_loss_layers = list(map(lambda x, y: x + y, query_edge_loss_layers, mainfold))
 
             # update model
             total_loss = []
@@ -264,12 +260,12 @@ class ModelTrainer(object):
                 init_edge[:, 1, num_supports + i, num_supports + i] = 0.0
 
             # for semi-supervised setting,
-            # for c in range(tt.arg.num_ways_test):
-            #     init_edge[:, :,
-            #     ((c + 1) * tt.arg.num_shots_test - tt.arg.num_unlabeled):(c + 1) * tt.arg.num_shots_test,
-            #     :num_supports] = 0.5
-            #     init_edge[:, :, :num_supports,
-            #     ((c + 1) * tt.arg.num_shots_test - tt.arg.num_unlabeled):(c + 1) * tt.arg.num_shots_test] = 0.5
+            for c in range(tt.arg.num_ways_test):
+                init_edge[:, :,
+                ((c + 1) * tt.arg.num_shots_test - tt.arg.num_unlabeled):(c + 1) * tt.arg.num_shots_test,
+                :num_supports] = 0.5
+                init_edge[:, :, :num_supports,
+                ((c + 1) * tt.arg.num_shots_test - tt.arg.num_unlabeled):(c + 1) * tt.arg.num_shots_test] = 0.5
 
             # set as train mode
             self.enc_module.eval()
@@ -305,14 +301,14 @@ class ModelTrainer(object):
                                             1)  # (batch_size x num_queries) x (num_support + 1) x featdim
 
                 input_edge_feat = 0.5 * torch.ones(tt.arg.test_batch_size, 3, num_supports + 1, num_supports + 1).to(
-                    tt.arg.device)  # batch_size x 2 x (num_support + 1) x (num_support + 1)
+                    tt.arg.device)  # batch_size x 3 x (num_support + 1) x (num_support + 1)
 
                 input_edge_feat[:, :, :num_supports, :num_supports] = init_edge[:, :, :num_supports,
-                                                                      :num_supports]  # batch_size x 2 x (num_support + 1) x (num_support + 1)
+                                                                      :num_supports]  # batch_size x 3 x (num_support + 1) x (num_support + 1)
                 input_edge_feat = input_edge_feat.repeat(num_queries, 1, 1,
-                                                         1)  # (batch_size x num_queries) x 2 x (num_support + 1) x (num_support + 1)
+                                                         1)  # (batch_size x num_queries) x 3 x (num_support + 1) x (num_support + 1)
 
-                # logit: (batch_size x num_queries) x 2 x (num_support + 1) x (num_support + 1)
+                # logit: (batch_size x num_queries) x 3 x (num_support + 1) x (num_support + 1)
                 logit, mafold = self.gnn_module(node_feat=input_node_feat, edge_feat=input_edge_feat,
                                                 mainfold=input_edge_feat)
                 logit = logit[-1]
@@ -320,7 +316,7 @@ class ModelTrainer(object):
 
                 logit = logit.view(tt.arg.test_batch_size, num_queries, 3, num_supports + 1, num_supports + 1)
 
-                # batch_size x num_queries x 2 x (num_support + 1) x (num_support + 1)
+                # batch_size x num_queries x 3 x (num_support + 1) x (num_support + 1)
                 # logit --> full_logit (batch_size x 2 x num_samples x num_samples)
                 full_logit[:, :, :num_supports, :num_supports] = logit[:, :, :, :num_supports, :num_supports].mean(1)
                 full_logit[:, :, :num_supports, num_supports:] = logit[:, :, :, :num_supports, -1].transpose(1,
@@ -331,8 +327,6 @@ class ModelTrainer(object):
             # (4) compute loss
             full_edge_loss = self.edge_loss(1 - full_logit[:, 0], 1 - full_edge[:, 0])
 
-            query_edge_loss = torch.sum(full_edge_loss * query_edge_mask * evaluation_mask) / torch.sum(
-                query_edge_mask * evaluation_mask)
 
             # weighted loss for balancing pos/neg
             pos_query_edge_loss = torch.sum(
@@ -342,8 +336,7 @@ class ModelTrainer(object):
                 full_edge_loss * query_edge_mask * (1 - full_edge[:, 0]) * evaluation_mask) / torch.sum(
                 query_edge_mask * (1 - full_edge[:, 0]) * evaluation_mask)
             query_edge_loss = pos_query_edge_loss + neg_query_edge_loss
-
-            query_edge_loss = (query_edge_loss + 0 * mafold)
+            query_edge_loss = (query_edge_loss + tt.arg.loss_parameter * mafold)
 
             # compute accuracy
             full_edge_accr = self.hit(full_logit, 1 - full_edge[:, 0].long())
@@ -353,17 +346,13 @@ class ModelTrainer(object):
             # compute node accuracy (num_tasks x num_quries x num_ways)
             query_node_pred = torch.bmm(full_logit[:, 0, num_supports:, :num_supports],
                                         self.one_hot_encode(tt.arg.num_ways_test,
-                                                            support_label.long()))  # (num_tasks x num_quries x num_supports) * (num_tasks x num_supports x num_ways)
-
+                                                            support_label.long()))
             query_node_accr = torch.eq(torch.max(query_node_pred, -1)[1], query_label.long()).float().mean()
-            # tmp  = confusion_matrix(query_pred, query_la,)
 
             query_edge_losses += [query_edge_loss.item()]
             query_edge_accrs += [query_edge_accr.item()]
             query_node_accrs += [query_node_accr.item()]
 
-
-            # logging
             # logging
         if log_flag:
             tt.log('---------------------------')
@@ -391,15 +380,16 @@ class ModelTrainer(object):
 
     def label2edge(self, label):
         # get size
-        num_samples = label.size(1) # num_samples = 10 
+        num_samples = label.size(1)
 
         # reshape
-        label_i = label.unsqueeze(-1).repeat(1, 1, num_samples)    
-        label_j = label_i.transpose(1, 2)  
+        label_i = label.unsqueeze(-1).repeat(1, 1, num_samples)
+        label_j = label_i.transpose(1, 2)
 
         # compute edge
-        edge = torch.eq(label_i, label_j).float().to(tt.arg.device)   
+        edge = torch.eq(label_i, label_j).float().to(tt.arg.device)
 
+        # expand
         edge = edge.unsqueeze(1)     # size = 80*1*10*10
         edge = torch.cat([edge, 1 - edge, 1 - edge], 1)    # size = 80*3*10*10
         return edge
@@ -411,31 +401,27 @@ class ModelTrainer(object):
 
     def one_hot_encode(self, num_classes, class_idx):
         return torch.eye(num_classes)[class_idx].to(tt.arg.device)
-    
+
     def save_checkpoint(self, state, is_best):
-        torch.save(state, 'result 5-way 5-shot/checkpoints/{}/'.format(tt.arg.experiment) + 'checkpoint.pth.tar')
+        torch.save(state, 'result/checkpoints/{}/'.format(tt.arg.experiment) + 'checkpoint.pth.tar')
         if is_best:
-            shutil.copyfile('result 5-way 5-shot/checkpoints/{}/'.format(tt.arg.experiment) + 'checkpoint.pth.tar',
-                            'result 5-way 5-shot/checkpoints/{}/'.format(tt.arg.experiment) + 'model_best.pth.tar')
+            shutil.copyfile('result/checkpoints/{}/'.format(tt.arg.experiment) + 'checkpoint.pth.tar',
+                            'result/checkpoints/{}/'.format(tt.arg.experiment) + 'model_best.pth.tar')
 
 def set_exp_name():
     exp_name = 'D-{}'.format(tt.arg.dataset)
     exp_name += '_N-{}_K-{}_U-{}'.format(tt.arg.num_ways, tt.arg.num_shots, tt.arg.num_unlabeled)
     exp_name += '_L-{}_B-{}'.format(tt.arg.num_layers, tt.arg.meta_batch_size)
     exp_name += '_T-{}'.format(tt.arg.transductive)
-    exp_name += '_SEED-{}'.format(tt.arg.seed)
+    # exp_name += '_SEED-{}'.format(tt.arg.seed)
 
     return exp_name
 
 if __name__ == '__main__':
-    
-    
-    #  Parameter gpu settings
-    tt.arg.device = device = torch.device("cuda:3")
 
-
+    tt.arg.device = torch.device("cuda:3")
     # replace dataset_root with your own
-    tt.arg.dataset_root = './data/private/dataset/'  
+    tt.arg.dataset_root = './data/private/dataset/'
     # tt.arg.dataset_root = '.\data\private\dataset\\'
     tt.arg.dataset = 'mini' if tt.arg.dataset is None else tt.arg.dataset
     tt.arg.num_ways = 5 if tt.arg.num_ways is None else tt.arg.num_ways
@@ -443,9 +429,10 @@ if __name__ == '__main__':
     tt.arg.num_unlabeled = 0 if tt.arg.num_unlabeled is None else tt.arg.num_unlabeled
     tt.arg.num_layers = 4 if tt.arg.num_layers is None else tt.arg.num_layers
     tt.arg.meta_batch_size = 40 if tt.arg.meta_batch_size is None else tt.arg.meta_batch_size
-    tt.arg.transductive = False if tt.arg.transductive is None else tt.arg.transductive   # If it is transcription set to True
+    tt.arg.transductive = False if tt.arg.transductive is None else tt.arg.transductive
     tt.arg.seed = 222 if tt.arg.seed is None else tt.arg.seed
     tt.arg.num_gpus = 1 if tt.arg.num_gpus is None else tt.arg.num_gpus
+    tt.arg.loss_parameter = torch.tensor(0.0)     #
     torch.backends.cudnn.benchmark = True
 
     tt.arg.num_ways_train = tt.arg.num_ways
@@ -497,7 +484,6 @@ if __name__ == '__main__':
         os.makedirs('result/checkpoints/' + tt.arg.experiment)
 
 
-    # embedding
     enc_module = EmbeddingImagenet(emb_size=tt.arg.emb_size)
 
     gnn_module = GraphNetwork(in_features=tt.arg.emb_size,
@@ -505,12 +491,17 @@ if __name__ == '__main__':
                               edge_features=tt.arg.num_node_features,
                               num_layers=tt.arg.num_layers,
                               dropout=tt.arg.dropout)
+
+
     if tt.arg.dataset == 'mini':
         train_loader = MiniImagenetLoader(root=tt.arg.dataset_root, partition='train')
         valid_loader = MiniImagenetLoader(root=tt.arg.dataset_root, partition='val')
     elif tt.arg.dataset == 'tiered':
         train_loader = TieredImagenetLoader(root=tt.arg.dataset_root, partition='train')
         valid_loader = TieredImagenetLoader(root=tt.arg.dataset_root, partition='val')
+    elif tt.arg.dataset == 'FC100':
+        train_loader = FC_100Loader(root=tt.arg.dataset_root, partition='train')
+        valid_loader = FC_100Loader(root=tt.arg.dataset_root, partition='val')
     elif tt.arg.dataset == 'CIFARFS':
         dataset_train = Cifar(root=tt.arg.dataset_root, partition='train')
         dataset_valid = Cifar(root=tt.arg.dataset_root, partition='val')
