@@ -1,5 +1,5 @@
 from torchtools import *
-from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader,Amazon_clothingLoader
+from data import MiniImagenetLoader, TieredImagenetLoader,Cifar,CIFARFSLoader,FC_100Loader
 from model import GraphNetwork
 from model import EmbeddingImagenet, GraphNetwork, ConvNet
 import shutil
@@ -113,6 +113,9 @@ if __name__ == '__main__':
         test_loader = MiniImagenetLoader(root=tt.arg.dataset_root, partition='test')
     elif tt.arg.dataset == 'tiered':
         test_loader = TieredImagenetLoader(root=tt.arg.dataset_root, partition='test')
+    elif tt.arg.dataset == 'FC100':
+        train_loader = FC_100Loader(root=tt.arg.dataset_root, partition='train')
+        valid_loader = FC_100Loader(root=tt.arg.dataset_root, partition='val')
     elif tt.arg.dataset == 'CIFARFS':
         dataset_train = Cifar(root=tt.arg.dataset_root, partition='train')
         dataset_valid = Cifar(root=tt.arg.dataset_root, partition='val')
